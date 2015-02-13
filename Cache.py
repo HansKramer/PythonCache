@@ -172,7 +172,7 @@ class CachePipe(object):
            @param[in] klass class definition
            @param[in] args  arguments to be passed to the constructor of klass
         """
-        self.__class__ = type('CachePipe', (klass, CachePipe),{})
+        self.__class__ = type('CachePipe', (klass, CachePipe), {})
         klass.__init__(self, **args)
 
     def read(self, key):
@@ -228,6 +228,8 @@ class CachePipe(object):
 
 
 if __name__ == "__main__":
+    # UNIT TESTING CODE !!!
+
     import sys
     from   syslog import openlog, LOG_PERROR, LOG_USER
 
@@ -237,20 +239,7 @@ if __name__ == "__main__":
          print "specify what to do!"
          sys.exit()
 
-    class TestStore(CacheImpl):
-        def __init__(self):
-            self.reset()
-
-        def reset(self):
-            self._data = {}
-            for i in range(10):
-                self._data["%03d" % i] = i
-            
-        def read(self, key):
-            return self._data[key]
-
-        def write(self, key, data):
-            self._data[key] = data
+    from TestStore import TestStore
 
     mdc = CachePipe()
     mdc.attach(CacheImplWriteBackMemory, cache_size=3)  # Made this node a write-back caching node (with nice small cache size for testing...)
@@ -268,8 +257,11 @@ if __name__ == "__main__":
         print value
         if value == 666:
             print "BUG!!!!!"
+        print "Expect cache miss"
         print mdc.read("002")
+        print "Expect cache miss"
         print mdc.read("003")
+        print "Expect cache miss"
         print mdc.read("004")
         print mdc.read("003")
         # cache size is 3 and "001" should be out of the cache. It doesn't have the dirty bit set 
@@ -277,6 +269,41 @@ if __name__ == "__main__":
         value =  mdc.read("001")
         if value != 666:
             print "BUG!!!!!"
+        print value
+    elif sys.argv[1] == "write":
+        print "Expect cache miss"
+        mdc.write("001", 101)
+        print "Expect data store not updated", mdb._data["001"]
+        print "Expect cache miss"
+        mdc.write("002", 102)
+        print "Expect cache miss"
+        mdc.write("003", 103)
+        print "Expect cache miss and key 101 moved out of cache and written to store"
+        mdc.write("004", 101)
+        print "001:", mdb._data["001"]
+        if mdb._data["001"] != 101:
+            print "BUG!!!!!"
+    elif sys.argv[1] == "complexobjects":
+        class AKlass:
+            def __init__(self):
+                self._values = [1, "hello", (1,2,3)]
+            def change(self):
+                self._values[1] = "bye"
+            def printit(self):
+                print self._values
+
+        aklass = AKlass()
+        
+        mdc.write("001", aklass)
+        aklass.change()
+        mdc.write("002", aklass)
+        bklass = mdc.read("001")
+        bklass = mdc.read("001")
+        cklass = mdc.read("002")
+
+        aklass.printit()
+        bklass.printit()
+        cklass.printit()
     else:
         print "Unknown task"         
     
