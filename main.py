@@ -43,7 +43,9 @@ if __name__ == "__main__":
 
     print mdc.read("54dc80c37b020a219e000001")
     print mdc.read("54dc80c37b020a219e000001")
+    print mdc.read("54dc80c37b020a219e000003")
     print mdc.read("54dc80c37b020a219e000007")
+    print mdc.read("54dc80c37b020a219e000003")
     print mdc.read("54dc80c37b020a219e000008")
     print mdc.read("54dc80c37b020a219e000009")
 

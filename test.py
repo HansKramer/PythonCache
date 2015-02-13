@@ -18,6 +18,7 @@ if __name__ == "__main__":
    
     if len(sys.argv) != 2:
          print "specify what to do!"
+         print "\te.g. ./test.py test1"
          sys.exit()
 
     # construct our cache
