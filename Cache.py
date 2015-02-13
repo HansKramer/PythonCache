@@ -136,11 +136,11 @@ class CacheImplWriteBackMemory(CacheImpl):
         """
             Write all dirty cache enties to the store
         """
-        CacheImpl.flush(self)
         for key, value in self._cache_dirty.items():
             syslog(LOG_DEBUG, "CacheImplWriteBack.flush key=%s value=%s" % (key, cPickle.loads(self._cache_store[key])))
             if value:
                 self.pipe_write(key, cPickle.loads(self._cache_store[key]))
+        CacheImpl.flush(self)
 
 
 class CachePipe(object):
