@@ -14,7 +14,7 @@
 
 import pymongo
 from   bson.objectid import ObjectId
-from   syslog        import openlog, syslog, LOG_INFO, LOG_PERROR, LOG_USER
+from   syslog        import syslog, LOG_INFO, LOG_PERROR, LOG_USER
 from   Cache         import CacheImpl
 
 
@@ -63,6 +63,9 @@ class MongoStore(CacheImpl):
 
 if __name__ == "__main__":
      import sys
+     from   syslog import openlog
+
+     openlog("MongoStore Unit Testing", LOG_PERROR, LOG_USER)
      
      if len(sys.argv) != 2:
          print "specify what to do!"
@@ -80,4 +83,4 @@ if __name__ == "__main__":
          print ms.read("54dc80c37b020a219e000001")
          print ms.read("54dc798d77f68a6361532d05")
      else:
-         print "Unknow task"
+         print "Unknown task"

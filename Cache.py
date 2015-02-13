@@ -5,9 +5,9 @@
 # \version   0.1
 # \date      Feb 2015
 # \details  
-#            I see a cache basically as a pipe that push data back and forth
-#            between a pipe remembers some data at certain times completely
-#            opaquely from the user.
+#            I see a cache basically as a pipe that pushes data back and forth, while
+#            it remembers a limited amount data and stores it locally. This happens
+#            completely opaquely from the user.
 #            
 #            The following goals are set for this implementation
 #           
@@ -98,7 +98,6 @@ class CacheImplWriteBackMemory(CacheImpl):
             @return         the value belonging to the key
         """
         syslog(LOG_DEBUG, "CacheImplWriteBack.read : %s" % key)
-        print self._cache_store
         if not self._cache_store.has_key(key): # cache miss
             syslog(LOG_DEBUG, "cache miss for %s" % key)
             if len(self._cache_fifo) >= self._cache_max: #free a cache block
@@ -229,4 +228,55 @@ class CachePipe(object):
 
 
 if __name__ == "__main__":
-    print "Unit testing"
+    import sys
+    from   syslog import openlog, LOG_PERROR, LOG_USER
+
+    openlog("MongoStore Unit Testing", LOG_PERROR, LOG_USER)
+   
+    if len(sys.argv) != 2:
+         print "specify what to do!"
+         sys.exit()
+
+    class TestStore(CacheImpl):
+        def __init__(self):
+            self.reset()
+
+        def reset(self):
+            self._data = {}
+            for i in range(10):
+                self._data["%03d" % i] = i
+            
+        def read(self, key):
+            return self._data[key]
+
+        def write(self, key, data):
+            self._data[key] = data
+
+    mdc = CachePipe()
+    mdc.attach(CacheImplWriteBackMemory, cache_size=3)  # Made this node a write-back caching node (with nice small cache size for testing...)
+    mdb = CachePipe()
+    mdb.attach(TestStore)
+    mdc.connect(mdb) # hook our cache to TestStore
+
+    if sys.argv[1] == "read":
+        print "Expect cache miss"
+        print mdc.read("001")
+        print "Read from cache" 
+        # secretly modify TestScore and verify that the cached value is returned!!!
+        mdb._data["001"] = 666
+        value = mdc.read("001")
+        print value
+        if value == 666:
+            print "BUG!!!!!"
+        print mdc.read("002")
+        print mdc.read("003")
+        print mdc.read("004")
+        print mdc.read("003")
+        # cache size is 3 and "001" should be out of the cache. It doesn't have the dirty bit set 
+        # because it was NOT modified thru the Cache object, so the next time it shoudl return 666!
+        value =  mdc.read("001")
+        if value != 666:
+            print "BUG!!!!!"
+    else:
+        print "Unknown task"         
+    
