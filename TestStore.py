@@ -30,4 +30,4 @@ class TestStore(CacheImpl):
 
     def write(self, key, value):
         syslog(LOG_INFO, "TestStore.write %s %s" % (key, value))
-        self._data[key] = data
+        self._data[key] = value
