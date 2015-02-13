@@ -48,7 +48,10 @@ class MongoStore(CacheImpl):
             @returns         The data associated by key
         """
         syslog(LOG_INFO, "MongoStore.read %s" % key)
-        return [x for x in self._c.find({'_id': ObjectId(key)}, {'_id': 0})]
+        try:
+            return self._c.find({'_id': ObjectId(key)}, {'_id': 0})[0]['name']
+        except IndexError:
+            return None
 
     def write(self, key, value):
         """

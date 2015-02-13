@@ -159,7 +159,7 @@ class CachePipe(object):
             @param[in] end_point The CachePipe instance we should starting sending our data to
         """
         if not isinstance(end_point, CachePipe):
-            raise TypeError("CachePipe: invalid type passed: %s" % type(end_point))
+            raise TypeError("CachePipe.connect: invalid type passed: %s" % type(end_point))
         self._end_point = end_point
 
     def attach(self, klass, **args): # dynamix class mixin
@@ -172,8 +172,13 @@ class CachePipe(object):
            @param[in] klass class definition
            @param[in] args  arguments to be passed to the constructor of klass
         """
-        self.__class__ = type('CachePipe', (klass, CachePipe), {})
-        klass.__init__(self, **args)
+        # check if it is a class derived from CacheImpl
+        for k in (klass,) +  klass.__bases__:
+            if k is CacheImpl:
+                self.__class__ = type('CachePipe', (klass, CachePipe), {})
+                klass.__init__(self, **args)
+                return
+        raise TypeError("CachePipe.attache: invalid type passed: %s" % klass)
 
     def read(self, key):
         """
@@ -225,6 +230,15 @@ class CachePipe(object):
         syslog(LOG_DEBUG, "CachePipe.flush")
         if self._end_point != None:
             self._end_point.flush()
+
+
+def md_cache(store, cache_size, **args):
+    front  = CachePipe()
+    front.attach(CacheImplWriteBackMemory, cache_size=cache_size)
+    back   = CachePipe()
+    back.attach(store, **args)
+    front.connect(back)
+    return front
 
 
 if __name__ == "__main__":
