@@ -5,7 +5,12 @@
 # \version   0.1
 # \date      Feb 2015
 #
-
+# \details
+#            Implementation of a connector between the Cache Pipe and MongoDB back-end store
+#
+#            The MongoStore object inherits from CacheImpl and is a Mixin class for the
+#            CachePipe class. After it it attached to the CachePipe object it ends the pipeline
+#            
 
 import pymongo
 from   bson.objectid import ObjectId
@@ -21,17 +26,19 @@ class MongoStore(CacheImpl):
         for the Cache Library
     """
 
-    def __init__(self, host = '127.0.0.1', port = 27017):
+    def __init__(self, host = '127.0.0.1', port = 27017, db = "test", collection = "test"):
         """
             Contructor 
 
-            @param[in] host  The host were your MongoDB database server is running
-            @param[in] port  The port the MOngoDB server is using
+            @param[in] host       The host were your MongoDB database server is running
+            @param[in] port       The port the MongoDB server is using
+            @param[in] db         The database name
+            @param[in] collection The collection name
         """
         CacheImpl.__init__(self)
         self._mc = pymongo.Connection(host, port)
-        self._db = self._mc.test
-        self._c  = self._db.test
+        self._db = self._mc[db]
+        self._c  = self._db[collection]
     
     def read(self, key):
         """

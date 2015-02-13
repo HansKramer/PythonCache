@@ -19,7 +19,7 @@ def factory_mongo_cache(host = "localhost", port = 27017, cache_size = 3):
     mdc_end    = CachePipe()
     mdc_front.attach(CacheImpl)
     mdc_middle.attach(CacheImplWriteBackMemory, cache_size=cache_size)
-    mdc_end.attach(MongoStore, host = "localhost", port = 27017)
+    mdc_end.attach(MongoStore, host = "localhost", port = 27017, db="test", collection="test")
     mdc_front.connect(mdc_middle)
     mdc_middle.connect(mdc_end)
     return mdc_front
