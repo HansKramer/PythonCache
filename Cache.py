@@ -2,7 +2,7 @@
 #
 # \brief     Cache Class
 # \author    Hans Kramer
-# \version   0.1
+# \version   0.2
 # \date      Feb 2015
 # \details  
 #            I see a cache basically as a pipe that pushes data back and forth, while
@@ -26,6 +26,12 @@
 #            The ability to chain more than one pipe provides the multi level
 #            caching feature of this library 
 #      
+# \remark    0.2 Change the cache storage from
+#                self._cache_store[key]
+#                self._cache_dirty[key]
+#            to
+#                self._cache[key]["data"]
+#                self._cache[key]["dirty"]
 #
 
 
@@ -87,6 +93,8 @@ class CacheImplWriteBackMemory(CacheImpl):
         CacheImpl.__init__(self)
         self._cache_store = {}   
         self._cache_dirty = {}
+        
+        self._cache       = {}
         self._cache_fifo  = []
         self._cache_max   = cache_size
         
@@ -98,18 +106,16 @@ class CacheImplWriteBackMemory(CacheImpl):
             @return         the value belonging to the key
         """
         syslog(LOG_DEBUG, "CacheImplWriteBack.read : %s" % key)
-        if not self._cache_store.has_key(key): # cache miss
+        if not self._cache.has_key(key): # cache miss
             syslog(LOG_DEBUG, "cache miss for %s" % key)
             if len(self._cache_fifo) >= self._cache_max: #free a cache block
                 old_key = self._cache_fifo.pop(0)
-                if self._cache_dirty[old_key]:
-                    self.pipe_write(old_key, cPickle.loads(self._cache_store[old_key]))
-                del self._cache_store[old_key]
-                del self._cache_dirty[old_key]
+                if self._cache[old_key]["dirty"]:
+                    self.pipe_write(old_key, cPickle.loads(self._cache[old_key]["data"]))
+                del self._cache[old_key]
             self._cache_fifo += [key,]
-            self._cache_store[key] = cPickle.dumps(self.pipe_read(key))
-            self._cache_dirty[key] = False
-        return cPickle.loads(self._cache_store[key])
+            self._cache[key] = {"data": cPickle.dumps(self.pipe_read(key)), "dirty": False}
+        return cPickle.loads(self._cache[key]["data"])
 
     def write(self, key, value):
         """
@@ -119,27 +125,25 @@ class CacheImplWriteBackMemory(CacheImpl):
             @param[out]  value   The value belonging to the key
         """
         syslog(LOG_DEBUG, "CacheImplWriteBack.write : %s %s" % (key, value))
-        if not self._cache_store.has_key(key):  # cache miss
+        if not self._cache.has_key(key):  # cache miss
             syslog(LOG_DEBUG, "cache miss for %s" % key)
             if len(self._cache_fifo) >= self._cache_max: #free cache block
                 old_key = self._cache_fifo.pop(0)
-                if self._cache_dirty[old_key]:
-                    self.pipe_write(old_key, cPickle.loads(self._cache_store[old_key]))
-                del self._cache_store[old_key]
-                del self._cache_dirty[old_key]
+                if self._cache[old_key]:
+                    self.pipe_write(old_key, cPickle.loads(self._cache[old_key]["data"]))
+                del self._cache[old_key]
             # cache block available
             self._cache_fifo += [key,]
-        self._cache_store[key] = cPickle.dumps(value)
-        self._cache_dirty[key] = True
+        self._cache[key] = {"data": cPickle.dumps(value), "dirty": True}
 
     def flush(self):
         """
             Write all dirty cache enties to the store
         """
-        for key, value in self._cache_dirty.items():
-            syslog(LOG_DEBUG, "CacheImplWriteBack.flush key=%s value=%s" % (key, cPickle.loads(self._cache_store[key])))
-            if value:
-                self.pipe_write(key, cPickle.loads(self._cache_store[key]))
+        for key in self._cache:
+            if self._cache[key]["dirty"]: 
+                syslog(LOG_DEBUG, "CacheImplWriteBack.flush key=%s" % key)
+                self.pipe_write(key, cPickle.loads(self._cache[key]["data"]))
         CacheImpl.flush(self)
 
 

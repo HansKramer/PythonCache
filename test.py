@@ -61,6 +61,10 @@ if __name__ == "__main__":
         print "on store keyA value : ", mdb._data["keyA"]
         mdc.read("keyD")
         print "on store keyA value : ", mdb._data["keyA"]
+    elif sys.argv[1] == "flush":
+        mdc.write("keyA", "valueA0")
+        mdc.write("keyB", "valueB0")
+        mdc.flush()
     else:
         print "Unknown task"         
     
